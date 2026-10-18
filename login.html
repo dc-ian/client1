@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Log in – Automotive Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="authpage">
+<nav>
+<div class="wrap">
+<a class="logo" href="index.html">Automotive <i>Service</i></a>
+<div class="nav-right"><a class="textlink" href="index.html">Back to home</a></div>
+</div>
+</nav>
+
+<main class="authwrap">
+<div class="authcard">
+<h1 id="aTitle">Welcome back</h1>
+<p class="sub" id="aSub">Log in to manage your bookings.</p>
+
+<div class="tabs" role="tablist" aria-label="Account type">
+<button type="button" role="tab" data-role="customer" class="on">Customer</button>
+<button type="button" role="tab" data-role="admin">Admin</button>
+</div>
+
+<form id="authForm" class="form" novalidate>
+<input id="fName" placeholder="Full name" aria-label="Full name" autocomplete="name" hidden>
+<input id="fPhone" type="tel" placeholder="Mobile number" aria-label="Mobile number" autocomplete="tel" hidden>
+<input id="fEmail" type="email" placeholder="Email" aria-label="Email" autocomplete="email">
+<input id="fPass" type="password" placeholder="Password" aria-label="Password" autocomplete="current-password">
+<p class="err" id="err" role="alert" hidden></p>
+<button class="btn submit" type="submit" id="go">Log in</button>
+</form>
+<p class="switch" id="switchRow">New here? <a href="#" id="switchLink">Create an account</a></p>
+<p class="demo">Demo only. Accounts are stored in this browser, not on a server.</p>
+</div>
+</main>
+
+<script src="auth.js"></script>
+<script>
+(function(){
+var q=new URLSearchParams(location.search),next=q.get('next');
+if(!/^[a-z]+\.html(#[a-z]+)?$/i.test(next||''))next='dashboard.html';
+var role='customer',mode=q.get('mode')==='register'?'register':'login';
+var tabs=document.querySelectorAll('.tabs button'),f=document.getElementById('authForm');
+var name=document.getElementById('fName'),phone=document.getElementById('fPhone'),email=document.getElementById('fEmail'),pass=document.getElementById('fPass');
+var err=document.getElementById('err'),go=document.getElementById('go'),title=document.getElementById('aTitle'),sub=document.getElementById('aSub'),sw=document.getElementById('switchRow');
+var subs={customer:'Log in to see your service and booking history.',admin:'Staff only. Log in to manage the platform.'};
+function paint(){
+ var reg=mode==='register';
+ title.textContent=reg?'Create your account':'Welcome back';
+ sub.textContent=reg?'Create a customer account to book services and keep your history.':subs[role];
+ name.hidden=phone.hidden=!reg;
+ pass.autocomplete=reg?'new-password':'current-password';
+ go.textContent=reg?'Create account':'Log in as '+role;
+ sw.hidden=role==='admin';
+ sw.firstChild.textContent=reg?'Already have an account? ':'New here? ';
+ document.getElementById('switchLink').textContent=reg?'Log in':'Create an account';
+ err.hidden=true;
+ tabs.forEach(function(t){var on=t.dataset.role===role;t.classList.toggle('on',on);t.setAttribute('aria-selected',on)});
+}
+tabs.forEach(function(t){t.addEventListener('click',function(){role=t.dataset.role;if(role==='admin')mode='login';paint()})});
+document.getElementById('switchLink').addEventListener('click',function(e){e.preventDefault();mode=mode==='login'?'register':'login';paint()});
+function fail(m){err.textContent=m;err.hidden=false}
+f.addEventListener('submit',function(e){
+ e.preventDefault();
+ var em=email.value.trim(),pw=pass.value;
+ if(!em||!pw)return fail('Enter your email and password.');
+ if(mode==='register'){
+  if(!name.value.trim())return fail('Enter your full name.');
+  if(!phone.value.trim())return fail('Enter your mobile number.');
+  if(pw.length<6)return fail('Use a password with at least 6 characters.');
+  var r=AS.register(role,name.value,em,pw,phone.value.trim());
+  if(r)return fail(r);
+ }
+ if(!AS.login(em,pw,role))return fail('Wrong email or password for a '+role+' account.');
+ location.href=next;
+});
+if(AS.session())location.replace(next);
+paint();
+})();
+</script>
+</body>
+</html>
