@@ -10,11 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body class="authpage">
+<body class="authpage light">
 <nav>
 <div class="wrap">
 <a class="logo" href="index.html">Automotive <i>Service</i></a>
-<div class="nav-right"><a class="textlink" href="index.html">Home</a><span class="nav-auth"></span></div>
+<div class="dnav"><a class="textlink" href="dashboard.html">Dashboard</a><a class="textlink" data-cust href="book.html">Book a service</a><a class="textlink" data-cust href="history.html">History</a><a class="textlink" data-admin href="bookings.html">Bookings</a><a class="textlink" data-admin href="customers.html">Customers</a><a class="textlink" href="#" id="logoutLink">Log out</a></div><span class="dnav-sp" aria-hidden="true"></span>
 </div>
 </nav>
 
@@ -23,114 +23,194 @@
 <dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"><div class="dlg-in"><p class="dlg-brand">Automotive Service</p><h2 id="dlgTitle"></h2><p class="sub" id="dlgNote"></p><div id="dlgBody"></div><div class="dlg-acts" id="dlgActs"></div></div></dialog>
 
 <script src="auth.js"></script>
+<script src="app.js"></script>
 <script>
 (function(){
-var me=AS.session();
-if(!me){location.replace('login.html');return}
-var root=document.getElementById('dash'),dlg=document.getElementById('dlg');
-var STATUS=['Pending','Confirmed','Completed','Cancelled'];
-function h(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
-function fmtDate(d){return d?new Date(d+'T00:00').toLocaleDateString('en-PH',{year:'numeric',month:'short',day:'numeric'}):''}
-function bookings(){return AS.get('as_bookings',[]).slice().sort(function(a,b){return b.created-a.created})}
-function mine(email){return bookings().filter(function(b){return (b.owner||'').toLowerCase()===email||(b.email||'').toLowerCase()===email})}
-function badge(s){return h('span','badge b-'+s.toLowerCase(),s)}
-function table(heads,rows){
- var w=h('div','tablewrap'),t=h('table'),th=h('thead'),tr=h('tr');
- heads.forEach(function(x){tr.appendChild(h('th','',x))});th.appendChild(tr);t.appendChild(th);
- var tb=h('tbody');
- rows.forEach(function(r){var tr=h('tr');r.forEach(function(c){var td=h('td');if(c&&c.nodeType)td.appendChild(c);else td.textContent=c==null?'':c;tr.appendChild(td)});tb.appendChild(tr)});
- t.appendChild(tb);w.appendChild(t);return w;
-}
-function stat(label,value){var c=h('div','stat');c.appendChild(h('strong','',String(value)));c.appendChild(h('small','',label));return c}
-function btn(text,cls,fn){var b=h('button','btn sm '+cls,text);b.type='button';b.addEventListener('click',fn);return b}
-function empty(msg){var p=h('p','empty',msg);return p}
-
-function details(b){
- var rows=[['Reference',b.ref],['Status',b.status],['Service',b.service],['Other service needed',b.other],['Date',fmtDate(b.date)],['Time',b.time],['Name',b.name],['Mobile number',b.mobile],['Email',b.email],['Address',b.address],['Vehicle',b.vehicle],['Issue',b.issue]].filter(function(r){return r[1]});
- var body=document.getElementById('dlgBody');body.textContent='';
- var dl=h('dl');rows.forEach(function(r){dl.appendChild(h('dt','',r[0]));dl.appendChild(h('dd','',r[1]))});body.appendChild(dl);
- document.getElementById('dlgTitle').textContent='Booking details';
- document.getElementById('dlgNote').textContent='';
- var a=document.getElementById('dlgActs');a.textContent='';
- var p=btn('Print','',function(){window.print()});p.classList.remove('sm');a.appendChild(p);
- var c=btn('Close','ghost',function(){dlg.close()});c.classList.remove('sm');a.appendChild(c);
- dlg.showModal();
-}
-function viewBtn(b){return btn('View','ghost',function(){details(b)})}
-
-/* ---------- Customer ---------- */
+if(!guard())return;
+wireNav();
+var root=document.getElementById('dash');
+/* ---------- Customer overview ---------- */
 function customer(){
- var list=mine(me.email);
+ var list=mine(me.email),car=getCar(),cart=getCart();
  root.textContent='';
  var top=h('div','dash-top');
- var t=h('div');t.appendChild(h('h1','','Hi, '+me.name.split(' ')[0]));t.appendChild(h('p','sub','Your service and booking history.'));
- top.appendChild(t);
- var l=h('a','btn','Book a service');l.href='index.html#booking';top.appendChild(l);
+ var t=h('div');t.appendChild(h('h1','','Hi, '+me.name.split(' ')[0]));t.appendChild(h('p','sub','A quick look at your car and your services.'));top.appendChild(t);
+ var l=h('a','btn','Book a service');l.href='book.html';top.appendChild(l);
  root.appendChild(top);
+
  var s=h('div','stats-row');
  s.appendChild(stat('Total bookings',list.length));
  s.appendChild(stat('Upcoming',list.filter(function(b){return b.status==='Pending'||b.status==='Confirmed'}).length));
  s.appendChild(stat('Completed services',list.filter(function(b){return b.status==='Completed'}).length));
  root.appendChild(s);
- root.appendChild(h('h2','','Service and booking history'));
- if(!list.length){var e=empty('No bookings yet. Book your first service and it will show up here.');root.appendChild(e);return}
- root.appendChild(table(['Reference','Service','Date','Time','Vehicle','Status',''],list.map(function(b){return [b.ref,b.service,fmtDate(b.date),b.time,b.vehicle||'-',badge(b.status),viewBtn(b)]})));
+
+ if(cart.length){
+  var total=cart.reduce(function(a,x){return a+x.price},0);
+  var cn=h('div','cartnote');
+  cn.appendChild(h('span','','You have '+cart.length+' service'+(cart.length===1?'':'s')+' in your cart ('+money(total)+').'));
+  var ca=h('a','btn sm','Continue booking');ca.href='book.html';cn.appendChild(ca);
+  root.appendChild(cn);
+ }
+
+ var grid=h('div','ovgrid');
+ var nc=h('div','ovcard');nc.appendChild(h('h3','','Next appointment'));
+ var up=upcoming(list);
+ if(up){
+  nc.appendChild(h('p','ov-big',up.service));
+  nc.appendChild(h('p','ov-meta',fmtDate(up.date)+' at '+up.time));
+  var row=h('div','ov-row');row.appendChild(badge(up.status));row.appendChild(viewBtn(up));nc.appendChild(row);
+ }else{
+  nc.appendChild(h('p','ov-meta','No upcoming service.'));
+  var nb=h('a','btn sm','Book a service');nb.href='book.html';nc.appendChild(nb);
+ }
+ var vc=h('div','ovcard');vc.appendChild(h('h3','','Your vehicle'));
+ if(car){vc.appendChild(h('p','ov-big',carText(car)));vc.appendChild(h('p','ov-meta',car.fuel||''))}
+ else vc.appendChild(h('p','ov-meta','No vehicle saved yet.'));
+ var vr=h('div','ov-row');vr.appendChild(btn(car?'Change':'Add vehicle','ghost',function(){vehicleDialog(customer)}));vc.appendChild(vr);
+ grid.appendChild(nc);grid.appendChild(vc);root.appendChild(grid);
+
+ var rh=h('div','ov-head');rh.appendChild(h('h2','','Recent bookings'));
+ var all=h('a','textlink2','View all history');all.href='history.html';rh.appendChild(all);root.appendChild(rh);
+ if(!list.length){root.appendChild(empty('No bookings yet. Book your first service and it will show up here.'));return}
+ root.appendChild(table(['Reference','Service','Date','Time','Status',''],list.slice(0,3).map(function(b){return [b.ref,b.service,fmtDate(b.date),b.time,badge(b.status),viewBtn(b)]})));
 }
 
-/* ---------- Admin ---------- */
-var filter={status:'All',q:''};
+/* ---------- Income ---------- */
+var incPeriod='day',incAll=false;
+var PERIODS=[['day','Today'],['week','This week'],['month','This month'],['year','This year'],['all','All time']];
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function bdate(b){return b.completedAt?new Date(b.completedAt):new Date((b.date||today())+'T12:00')}
+function prevRange(p){
+ var n=new Date(),y=n.getFullYear(),m=n.getMonth();
+ if(p==='day'){var d=new Date(y,m,n.getDate()-1);return [ymd(d),ymd(d)]}
+ if(p==='week'){var s=new Date(y,m,n.getDate()-((n.getDay()+6)%7)-7);var e=new Date(s.getFullYear(),s.getMonth(),s.getDate()+6);return [ymd(s),ymd(e)]}
+ if(p==='month')return [ymd(new Date(y,m-1,1)),ymd(new Date(y,m,0))];
+ if(p==='year')return [(y-1)+'-01-01',(y-1)+'-12-31'];
+ return null;
+}
+function inRange(done,r){return done.filter(function(b){var d=incomeDate(b);return d>=r[0]&&d<=r[1]})}
+function buckets(p,rows,done){
+ var n=new Date(),y=n.getFullYear(),m=n.getMonth(),out=[],i;
+ function add(label,tip){out.push({label:label,tip:tip,value:0,count:0})}
+ function put(idx,b){if(idx<0||idx>=out.length)return;out[idx].value+=Number(b.total)||0;out[idx].count++}
+ if(p==='day'){
+  for(i=6;i<=21;i++)add(i<12?i+'a':(i===12?'12p':(i-12)+'p'),(i%12||12)+(i<12?' AM':' PM'));
+  rows.forEach(function(b){put(Math.min(21,Math.max(6,bdate(b).getHours()))-6,b)});
+ }else if(p==='week'){
+  var s=new Date(y,m,n.getDate()-((n.getDay()+6)%7));
+  for(i=0;i<7;i++){var d=new Date(s.getFullYear(),s.getMonth(),s.getDate()+i);add(DAYS[i],DAYS[i]+', '+MONTHS[d.getMonth()]+' '+d.getDate())}
+  rows.forEach(function(b){put((bdate(b).getDay()+6)%7,b)});
+ }else if(p==='month'){
+  var dim=new Date(y,m+1,0).getDate();
+  for(i=1;i<=dim;i++)add(String(i),MONTHS[m]+' '+i);
+  rows.forEach(function(b){put(bdate(b).getDate()-1,b)});
+ }else{
+  var first=y;done.forEach(function(b){var yy=bdate(b).getFullYear();if(yy<first)first=yy});
+  if(p==='all'&&first<y){for(i=first;i<=y;i++)add(String(i),String(i));rows.forEach(function(b){put(bdate(b).getFullYear()-first,b)})}
+  else{for(i=0;i<12;i++)add(MONTHS[i],MONTHS[i]+' '+y);rows.forEach(function(b){if(bdate(b).getFullYear()===y)put(bdate(b).getMonth(),b)})}
+ }
+ return out;
+}
+function topServices(rows){
+ var map={};
+ rows.forEach(function(b){var names=String(b.service||'Other').split(', '),part=(Number(b.total)||0)/names.length;names.forEach(function(nm){nm=nm.trim();if(!map[nm])map[nm]={name:nm,value:0,count:0};map[nm].value+=part;map[nm].count++})});
+ return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return b.value-a.value||b.count-a.count}).slice(0,5);
+}
+function incomeSection(all){
+ var wrap=h('div','incpanel'),done=all.filter(function(b){return b.status==='Completed'});
+ function draw(){
+  wrap.textContent='';
+  var rows=inPeriod(done,incPeriod),total=sumTotal(rows),label=PERIODS.filter(function(p){return p[0]===incPeriod})[0][1];
+
+  var head=h('div','inc-head');
+  head.appendChild(h('h2','','Income'));
+  var seg=h('div','seg');seg.setAttribute('role','tablist');
+  PERIODS.forEach(function(p){var b=h('button',incPeriod===p[0]?'on':'',p[1]);b.type='button';b.addEventListener('click',function(){incPeriod=p[0];incAll=false;draw()});seg.appendChild(b)});
+  head.appendChild(seg);wrap.appendChild(head);
+
+  var hero=h('div','inc-hero');
+  var big=h('div');big.appendChild(h('small','','Total income \u00B7 '+label));big.appendChild(h('strong','',money(total)));
+  var meta=h('div','inc-meta');
+  meta.appendChild(h('span','',rows.length+' completed service'+(rows.length===1?'':'s')));
+  if(rows.length)meta.appendChild(h('span','','Avg '+money(total/rows.length)+' per service'));
+  var pr=prevRange(incPeriod);
+  if(pr){
+   var prevTotal=sumTotal(inRange(done,pr));
+   if(total>0||prevTotal>0){
+    var chip=h('span','chip');
+    if(prevTotal===0){chip.className+=' up';chip.textContent='New vs '+(incPeriod==='day'?'yesterday':'last '+incPeriod)}
+    else{var pc=Math.round((total-prevTotal)/prevTotal*100);chip.className+=pc>=0?' up':' down';chip.textContent=(pc>=0?'\u25B2 ':'\u25BC ')+Math.abs(pc)+'% vs '+(incPeriod==='day'?'yesterday':'last '+incPeriod)}
+    meta.appendChild(chip);
+   }
+  }
+  big.appendChild(meta);hero.appendChild(big);wrap.appendChild(hero);
+
+  var grid=h('div','inc-grid');
+  var cb=h('div','inc-box');cb.appendChild(h('h3','','Income over time'));
+  var bk=buckets(incPeriod,rows,done),max=Math.max.apply(null,bk.map(function(x){return x.value}).concat([0]));
+  var chart=h('div','ichart'+(bk.length>16?' dense':''));
+  bk.forEach(function(x,idx){
+   var col=h('div','icol');col.title=x.tip+': '+money(x.value)+' ('+x.count+' service'+(x.count===1?'':'s')+')';
+   var bar=h('div','ibar'+(x.value?'':' zero'));bar.style.height=(max?Math.max(x.value?4:1,x.value/max*100):1)+'%';
+   if(x.value&&bk.length<=16){bar.appendChild(h('em','',Math.round(x.value).toLocaleString('en-PH')))}
+   col.appendChild(bar);
+   col.appendChild(h('span','',(bk.length>16&&idx%5!==0&&idx!==bk.length-1)?'':x.label));
+   chart.appendChild(col);
+  });
+  cb.appendChild(chart);
+  if(!total)cb.appendChild(h('p','inc-hint','Nothing completed in this period yet.'));
+  grid.appendChild(cb);
+
+  var tb=h('div','inc-box');tb.appendChild(h('h3','','Top services'));
+  var top=topServices(rows);
+  if(!top.length)tb.appendChild(h('p','inc-hint','No completed services in this period.'));
+  else{var ul=h('ul','tops'),tm=top[0].value||1;top.forEach(function(t){
+   var li=h('li');var r1=h('div','top-row');r1.appendChild(h('span','',t.name));r1.appendChild(h('b','',money(t.value)));li.appendChild(r1);
+   var tr=h('div','top-track');var f=h('div','top-fill');f.style.width=Math.max(4,t.value/tm*100)+'%';tr.appendChild(f);li.appendChild(tr);
+   li.appendChild(h('small','',t.count+' time'+(t.count===1?'':'s')));ul.appendChild(li)});tb.appendChild(ul)}
+  grid.appendChild(tb);wrap.appendChild(grid);
+
+  var list=rows.slice().sort(function(a,b){return bdate(b)-bdate(a)});
+  var lh=h('div','inc-listhead');lh.appendChild(h('h3','','Completed services'));wrap.appendChild(lh);
+  if(!list.length)wrap.appendChild(empty('Nothing completed '+(incPeriod==='all'?'yet':label.toLowerCase())+'. Mark a booking as Completed and its total is added here.'));
+  else{
+   var shown=incAll?list:list.slice(0,8);
+   wrap.appendChild(table(['Completed on','Reference','Customer','Service','Amount'],shown.map(function(b){return [fmtDate(incomeDate(b)),b.ref,b.name,b.service,b.total?money(b.total):'-']})));
+   if(list.length>8){var mb=h('button','btn sm ghost',incAll?'Show fewer':'Show all '+list.length);mb.type='button';mb.style.marginTop='12px';mb.addEventListener('click',function(){incAll=!incAll;draw()});wrap.appendChild(mb)}
+   if(rows.some(function(b){return !b.total}))wrap.appendChild(h('p','inc-hint','Some completed bookings have no price saved (made with the old booking form), so they count as \u20B10.00.'));
+  }
+ }
+ draw();return wrap;
+}
+
+/* ---------- Admin overview ---------- */
 function admin(){
- var all=bookings(),users=AS.users().filter(function(u){return u.role==='customer'});
+ var all=bookings(),users=customersList();
  root.textContent='';
  var top=h('div','dash-top');
- var t=h('div');t.appendChild(h('h1','','Admin dashboard'));t.appendChild(h('p','sub','Review bookings and customer details.'));top.appendChild(t);root.appendChild(top);
+ var t=h('div');t.appendChild(h('h1','','Admin dashboard'));t.appendChild(h('p','sub','A quick look at what needs your attention.'));top.appendChild(t);root.appendChild(top);
  var s=h('div','stats-row');
  s.appendChild(stat('Customers',users.length));
  s.appendChild(stat('All bookings',all.length));
  s.appendChild(stat('Pending',all.filter(function(b){return b.status==='Pending'}).length));
  s.appendChild(stat('Completed',all.filter(function(b){return b.status==='Completed'}).length));
  root.appendChild(s);
+ root.appendChild(incomeSection(all));
 
- root.appendChild(h('h2','','Bookings'));
- var bar=h('div','toolbar');
- var sel=h('select');['All'].concat(STATUS).forEach(function(x){var o=h('option','',x);o.value=x;sel.appendChild(o)});sel.value=filter.status;sel.setAttribute('aria-label','Filter by status');
- var q=h('input');q.placeholder='Search name, reference or service';q.value=filter.q;q.setAttribute('aria-label','Search bookings');
- bar.appendChild(sel);bar.appendChild(q);root.appendChild(bar);
- var holder=h('div');root.appendChild(holder);
- function draw(){
-  holder.textContent='';
-  var needle=filter.q.toLowerCase();
-  var rows=all.filter(function(b){return (filter.status==='All'||b.status===filter.status)&&(!needle||[b.name,b.ref,b.service,b.mobile].join(' ').toLowerCase().indexOf(needle)>-1)});
-  if(!rows.length){holder.appendChild(empty(all.length?'No bookings match your filter.':'No bookings yet. They will appear here when customers book.'));return}
-  holder.appendChild(table(['Reference','Customer','Service','Date and time','Vehicle','Status',''],rows.map(function(b){
-   var who=h('div');who.appendChild(h('strong','',b.name));who.appendChild(h('br'));who.appendChild(h('small','',b.mobile));
-   var st=h('select','statussel');STATUS.forEach(function(x){var o=h('option','',x);o.value=x;st.appendChild(o)});st.value=b.status;st.setAttribute('aria-label','Status for '+b.ref);
-   st.addEventListener('change',function(){var arr=AS.get('as_bookings',[]);arr.forEach(function(x){if(x.ref===b.ref)x.status=st.value});AS.set('as_bookings',arr);admin()});
-   return [b.ref,who,b.service,fmtDate(b.date)+', '+b.time,b.vehicle||'-',st,viewBtn(b)];
-  })));
- }
- sel.addEventListener('change',function(){filter.status=sel.value;draw()});
- q.addEventListener('input',function(){filter.q=q.value;draw()});
- draw();
+ root.appendChild(sectionHead('Needs attention','View all bookings','bookings.html'));
+ var pend=all.filter(function(b){return b.status==='Pending'}).slice(0,5);
+ if(!pend.length)root.appendChild(empty('Nothing is waiting. Every booking has been handled.'));
+ else root.appendChild(table(['Reference','Customer','Service','Date and time','Status',''],pend.map(function(b){return [b.ref,whoCell(b),b.service,fmtDate(b.date)+', '+b.time,statusSelect(b,admin),viewBtn(b)]})));
 
- root.appendChild(h('h2','','Customers'));
- if(!users.length){root.appendChild(empty('No customer accounts yet.'));return}
- root.appendChild(table(['Name','Email','Mobile','Bookings',''],users.map(function(u){
-  var hist=mine(u.email);
-  return [u.name,u.email,u.phone||'-',String(hist.length),btn('Details','ghost',function(){customerDetails(u,hist)})];
- })));
-}
-function customerDetails(u,hist){
- var body=document.getElementById('dlgBody');body.textContent='';
- var dl=h('dl');[['Name',u.name],['Email',u.email],['Mobile number',u.phone||'-'],['Total bookings',String(hist.length)]].forEach(function(r){dl.appendChild(h('dt','',r[0]));dl.appendChild(h('dd','',r[1]))});body.appendChild(dl);
- body.appendChild(h('h3','mini','Booking history'));
- if(!hist.length)body.appendChild(h('p','empty','No bookings yet.'));
- else hist.forEach(function(b){var row=h('div','histrow');row.appendChild(h('span','',b.service+' · '+fmtDate(b.date)));row.appendChild(badge(b.status));body.appendChild(row)});
- document.getElementById('dlgTitle').textContent='Customer details';
- document.getElementById('dlgNote').textContent='';
- var a=document.getElementById('dlgActs');a.textContent='';
- var c=btn('Close','ghost',function(){dlg.close()});c.classList.remove('sm');a.appendChild(c);
- dlg.showModal();
+ root.appendChild(sectionHead('Today and upcoming'));
+ var up=upcomingList(all).slice(0,5);
+ if(!up.length)root.appendChild(empty('No upcoming appointments.'));
+ else root.appendChild(table(['Date and time','Customer','Service','Status',''],up.map(function(b){return [fmtDate(b.date)+', '+b.time,whoCell(b),b.service,badge(b.status),viewBtn(b)]})));
+
+ root.appendChild(sectionHead('Recent customers','View all customers','customers.html'));
+ var rc=users.slice().reverse().slice(0,5);
+ if(!rc.length)root.appendChild(empty('No customer accounts yet.'));
+ else root.appendChild(table(['Name','Email','Mobile','Bookings',''],customerRows(rc)));
 }
 
 if(me.role==='admin')admin();else customer();

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07070a"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e11d2e'/%3E%3Cpath d='M9 22l5-12h4l5 12h-4l-1-3h-4l-1 3z' fill='white'/%3E%3C/svg%3E">
+<title>Book a service – Automotive Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="authpage light">
+<nav>
+<div class="wrap">
+<a class="logo" href="index.html">Automotive <i>Service</i></a>
+<div class="dnav"><a class="textlink" href="dashboard.html">Dashboard</a><a class="textlink" data-cust href="book.html">Book a service</a><a class="textlink" data-cust href="history.html">History</a><a class="textlink" data-admin href="bookings.html">Bookings</a><a class="textlink" data-admin href="customers.html">Customers</a><a class="textlink" href="#" id="logoutLink">Log out</a></div><span class="dnav-sp" aria-hidden="true"></span>
+</div>
+</nav>
+
+<main class="wrap dash" id="dash"></main>
+
+<dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"><div class="dlg-in"><p class="dlg-brand">Automotive Service</p><h2 id="dlgTitle"></h2><p class="sub" id="dlgNote"></p><div id="dlgBody"></div><div class="dlg-acts" id="dlgActs"></div></div></dialog>
+
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script>
+(function(){
+if(!guard('customer'))return;
+wireNav();
+var root=document.getElementById('dash');
+var OILS=['Regular Oil','Semi-Synthetic Oil','Fully-Synthetic Oil'];
+var PMS_TIERS=[
+ {t:'EXPRESS',km:'5,000 kilometers or every 3 months',inc:['4L Oil','Oil Filter'],base:1800},
+ {t:'PLUS',km:'10,000 kilometers or every 6 months',inc:['4L Oil','Oil Filter','Tire Rotation','Spark Plugs'],base:2750},
+ {t:'PREMIUM',km:'20,000 kilometers or every 12 months',inc:['4L Oil','Oil Filter','Tire Rotation','Spark Plugs','Brake Cleaning','Air Filter'],base:3950}
+];
+var OIL_ADD=[0,600,1400];
+var CATS=['PMS Package','Periodic Services','Repairs','Tires','Accessories'];
+var CATALOG=[];
+PMS_TIERS.forEach(function(tr){OIL_ADD.forEach(function(add,i){
+ CATALOG.push({id:'pms-'+tr.t.toLowerCase()+'-'+i,cat:'PMS Package',oil:i,icon:'can',name:'PMS GAS '+OILS[i].replace(' Oil','').toUpperCase()+' '+tr.t,sub:'With free multi-point inspection service',
+  desc:'To maintain peak performance and vehicle longevity, it\u2019s recommended to have this service every <b>'+tr.km+'</b>, whichever comes first.',inc:tr.inc,price:tr.base+add});
+})});
+[['Basic Change Oil','Oil drain and refill with filter replacement.',['Oil change','Oil filter'],1200],
+ ['Intake / EGR Cleaning','Removes carbon build-up for smoother power delivery.',['Intake cleaning','EGR cleaning'],2500],
+ ['Engine Wash','Safe degreasing and rinse of the engine bay.',['Degrease','Rinse and dry'],800],
+ ['Radiator Flush','Fresh coolant and a full system flush to prevent overheating.',['Coolant flush','Coolant refill'],1500],
+ ['ATF Flush','Transmission fluid exchange for smoother shifting.',['ATF exchange','Fluid top-up'],3500]
+].forEach(function(s,i){CATALOG.push({id:'per-'+i,cat:'Periodic Services',icon:'can',name:s[0].toUpperCase(),sub:'With free multi-point inspection service',desc:s[1],inc:s[2],price:s[3]})});
+[['Vehicle General Repairs','Diagnosis and repair of common mechanical issues.',['Diagnosis','Labor'],1500],
+ ['Under Chassis Repairs','Suspension, steering and under chassis work by trained technicians.',['Inspection','Labor'],2000]
+].forEach(function(s,i){CATALOG.push({id:'rep-'+i,cat:'Repairs',icon:'wrench',name:s[0].toUpperCase(),sub:'Final cost confirmed after inspection',desc:s[1],inc:s[2],price:s[3]})});
+CATALOG.push({id:'tire-0',cat:'Tires',icon:'tire',name:'TIRE REPLACEMENT (PER TIRE)',sub:'Tire price not included',desc:'Mounting, balancing and disposal of your old tire.',inc:['Mounting','Balancing','Disposal'],price:3500});
+CATALOG.push({id:'acc-0',cat:'Accessories',icon:'pin',name:'GPS INSTALLATION',sub:'Device not included',desc:'Clean, hidden wiring and setup of your GPS tracker.',inc:['Installation','Setup'],price:2500});
+
+var ICONS={
+ can:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 6h14v6H20zM10 18h38a6 6 0 0 1 6 6v30a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V20a2 2 0 0 1 2-2z" fill="#e11d2e" stroke="#111" stroke-width="3" stroke-linejoin="round"/><path d="M30 28c-5 7-8 11-8 15a8 8 0 0 0 16 0c0-4-3-8-8-15z" fill="#111"/></svg>',
+ wrench:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M44 8a14 14 0 0 0-12 20L10 50a5 5 0 0 0 7 7l22-22a14 14 0 0 0 20-12l-9 6-7-2-2-7z" fill="#e11d2e" stroke="#111" stroke-width="3" stroke-linejoin="round"/></svg>',
+ tire:'<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" fill="#111"/><circle cx="32" cy="32" r="15" fill="#e11d2e" stroke="#111" stroke-width="3"/><circle cx="32" cy="32" r="4" fill="#111"/></svg>',
+ pin:'<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 4C21 4 13 12 13 23c0 14 19 36 19 36s19-22 19-36C51 12 43 4 32 4z" fill="#e11d2e" stroke="#111" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="23" r="7" fill="#111"/></svg>'
+};
+var CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>';
+var SEARCH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+
+
+var shop={cat:'PMS Package',oil:0,q:''};
+function page(){
+ root.textContent='';
+ var top=h('div','dash-top');
+ var t=h('div');t.appendChild(h('h1','','Book a service'));t.appendChild(h('p','sub','Pick your services, add them to the cart and choose a schedule.'));top.appendChild(t);root.appendChild(top);
+ var layout=h('div','shop');layout.id='book';
+ var left=h('div','shop-main'),right=h('aside','shop-cart');
+ layout.appendChild(left);layout.appendChild(right);root.appendChild(layout);
+ /* search */
+ var sw=h('div','shop-search');var q=h('input');q.type='search';q.placeholder='Search service';q.value=shop.q;q.setAttribute('aria-label','Search service');
+ sw.appendChild(q);sw.appendChild(html('span','',SEARCH));left.appendChild(sw);
+ /* category tabs */
+ var tabs=h('div','shop-tabs');left.appendChild(tabs);
+ left.appendChild(h('div','shop-note','Service price may vary upon checking your car at branch store'));
+ var oilWrap=h('div','shop-oil');left.appendChild(oilWrap);
+ var items=h('div','shop-items');left.appendChild(items);
+
+ function drawTabs(){
+  tabs.textContent='';
+  CATS.forEach(function(c){var b=h('button','shop-tab'+(shop.cat===c&&!shop.q?' on':''),c);b.type='button';b.addEventListener('click',function(){shop.cat=c;shop.q='';q.value='';drawAll()});tabs.appendChild(b)});
+ }
+ function drawOil(){
+  oilWrap.textContent='';
+  if(shop.cat!=='PMS Package'||shop.q){oilWrap.hidden=true;return}
+  oilWrap.hidden=false;oilWrap.appendChild(h('h2','','Choose your Oil'));
+  var row=h('div','shop-oilbtns');
+  OILS.forEach(function(o,i){var b=h('button','oilbtn'+(shop.oil===i?' on':''),o);b.type='button';b.addEventListener('click',function(){shop.oil=i;drawOil();drawItems()});row.appendChild(b)});
+  oilWrap.appendChild(row);
+ }
+ function drawItems(){
+  items.textContent='';
+  var needle=shop.q.toLowerCase(),cart=getCart();
+  var rows=CATALOG.filter(function(s){
+   if(needle)return (s.name+' '+s.cat+' '+s.inc.join(' ')).toLowerCase().indexOf(needle)>-1;
+   return s.cat===shop.cat&&(s.oil==null||s.oil===shop.oil);
+  });
+  if(!rows.length){items.appendChild(empty('No services match your search.'));return}
+  rows.forEach(function(s){
+   var inCart=cart.some(function(x){return x.id===s.id});
+   var card=h('article','svc');
+   card.appendChild(html('div','svc-img',ICONS[s.icon]));
+   var body=h('div','svc-body');
+   var head=h('div','svc-head');head.appendChild(h('h3','',s.name));head.appendChild(h('strong','',money(s.price)));body.appendChild(head);
+   body.appendChild(h('p','svc-sub',s.sub));
+   body.appendChild(html('p','svc-desc',s.desc));
+   var ul=h('ul','svc-inc');s.inc.forEach(function(i){ul.appendChild(html('li',''  ,CHECK+'<span></span>'));ul.lastChild.lastChild.textContent=i});body.appendChild(ul);
+   card.appendChild(body);
+   var add=h('button','svc-add'+(inCart?' in':''),inCart?'Added \u2713 (tap to remove)':'Add to cart');add.type='button';
+   add.addEventListener('click',function(){
+    var c=getCart();
+    if(inCart)c=c.filter(function(x){return x.id!==s.id});else c.push({id:s.id,name:s.name,price:s.price});
+    setCart(c);drawItems();drawCart();
+   });
+   card.appendChild(add);items.appendChild(card);
+  });
+ }
+ function drawAll(){drawTabs();drawOil();drawItems()}
+ q.addEventListener('input',function(){shop.q=q.value.trim();drawAll()});
+
+ /* cart */
+ function drawCart(){
+  right.textContent='';
+  var car=getCar(),cart=getCart();
+  var vr=h('div','cart-veh');
+  var vl=h('div','');vl.appendChild(h('span','lbl','Vehicle: '));
+  vl.appendChild(h('span','val',car?carText(car):'Not set'));
+  if(car&&car.fuel)vl.appendChild(h('span','fuel',' '+car.fuel));
+  vr.appendChild(vl);
+  vr.appendChild(btn(car?'Change':'Add vehicle','chg',function(){vehicleDialog(drawCart)}));
+  right.appendChild(vr);
+  var total=cart.reduce(function(a,x){return a+x.price},0);
+  var sub=h('div','cart-sub');sub.appendChild(h('span','','Subtotal ('+cart.length+' Item'+(cart.length===1?'':'s')+')'));sub.appendChild(h('strong','',money(total)));right.appendChild(sub);
+  if(cart.length){
+   var ul=h('ul','cart-list');
+   cart.forEach(function(x){
+    var li=h('li');li.appendChild(h('span','',x.name));li.appendChild(h('b','',money(x.price)));
+    var rm=h('button','rm','\u00D7');rm.type='button';rm.setAttribute('aria-label','Remove '+x.name);
+    rm.addEventListener('click',function(){setCart(getCart().filter(function(y){return y.id!==x.id}));drawItems();drawCart()});
+    li.appendChild(rm);ul.appendChild(li);
+   });
+   right.appendChild(ul);
+   var co=h('button','btn cart-go','Checkout');co.type='button';
+   co.addEventListener('click',function(){if(!getCar()){vehicleDialog(function(){drawCart();checkout()});return}checkout()});
+   right.appendChild(co);
+  }else right.appendChild(h('p','cart-empty','Your cart is empty. Add a service to get started.'));
+ }
+
+ function checkout(){
+  var cart=getCart(),car=getCar(),total=cart.reduce(function(a,x){return a+x.price},0),F;
+  openDlg('Choose your schedule','Open Monday to Saturday, 8 AM to 5 PM. We confirm by text.',function(body){
+   F=h('form','form');F.noValidate=true;
+   var d=field(F,'date','Booking date','date');d.min=today();
+   var ts=h('select');ts.name='time';ts.setAttribute('aria-label','Booking time');
+   var o0=h('option','','Booking time');o0.value='';ts.appendChild(o0);
+   var TIMES=['8:00 AM','9:00 AM','10:00 AM','11:00 AM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM'];
+   TIMES.forEach(function(x){var o=h('option','',x);o.value=x;ts.appendChild(o)});F.appendChild(ts);
+   var hint=h('p','hint','');F.appendChild(hint);
+   function refreshSlots(){
+    var dv=d.value,closed=!!dv&&!isOpenDay(dv);
+    hint.textContent=closed?'We are closed on Sundays. Please pick Monday to Saturday.':(dv?'Times marked Full or Passed cannot be booked.':'Pick a date to see available times.');
+    TIMES.forEach(function(x,i){
+     var o=ts.options[i+1],full=dv&&slotCount(dv,x)>=SLOT_CAP,past=dv&&isPast(dv,x);
+     o.disabled=!!(closed||full||past);o.textContent=x+(closed?'':(full?' (Full)':(past?' (Passed)':'')));
+    });
+    if(ts.value&&ts.selectedOptions[0].disabled)ts.value='';
+   }
+   d.addEventListener('change',refreshSlots);refreshSlots();
+   field(F,'mobile','Mobile number','tel',me.phone);
+   field(F,'address','Address (optional)');
+   var ta=h('textarea');ta.name='issue';ta.rows=3;ta.placeholder='Describe the issue (optional)';ta.setAttribute('aria-label','Issue');F.appendChild(ta);
+   var er=h('p','err','');er.hidden=true;F.appendChild(er);
+   body.appendChild(F);F.addEventListener('submit',function(e){e.preventDefault()});
+   var s=h('p','sub','Total: '+money(total)+' for '+cart.length+' service'+(cart.length===1?'':'s')+'. Final price is confirmed after inspection.');s.style.margin='14px 0 0';body.appendChild(s);
+  },[['Confirm booking','',function(){
+   var e=F.elements,er=F.querySelector('.err');
+   function bad(m){er.textContent=m;er.hidden=false}
+   if(!e.date.value)return bad('Pick a booking date.');
+   if(e.date.value<today())return bad('Pick today or a future date.');
+   if(!isOpenDay(e.date.value))return bad('We are closed on Sundays. Please pick Monday to Saturday.');
+   if(!e.time.value)return bad('Pick a booking time.');
+   if(isPast(e.date.value,e.time.value))return bad('That time has already passed. Pick a later time.');
+   if(slotCount(e.date.value,e.time.value)>=SLOT_CAP)return bad('That time slot just filled up. Please pick another.')
+   var mob=e.mobile.value.trim();
+   if(mob.replace(/\D/g,'').length<7||!/^[0-9+()\-\s]+$/.test(mob))return bad('Enter a valid mobile number, for example 0917 123 4567.');
+   var ref='AS-'+today().slice(2).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+   var b={ref:ref,owner:me.email,name:me.name,mobile:mob,email:me.email,address:e.address.value.trim(),service:cart.map(function(x){return x.name}).join(', '),other:'',date:e.date.value,time:e.time.value,vehicle:carText(car)+(car.fuel?' ('+car.fuel+')':''),issue:e.issue.value.trim(),total:total,status:'Pending',created:Date.now()};
+   var all=AS.get('as_bookings',[]);all.push(b);AS.set('as_bookings',all);setCart([]);toast('Booking '+ref+' received');
+   openDlg('Booking received','Keep this receipt. We will text you to confirm your slot.',function(body){
+    var p=h('p','ref','Reference no. '+ref);body.appendChild(p);
+    var dl=h('dl');[['Services',b.service],['Total',money(total)],['Date',fmtDate(b.date)],['Time',b.time],['Vehicle',b.vehicle],['Mobile number',b.mobile]].forEach(function(r){dl.appendChild(h('dt','',r[0]));dl.appendChild(h('dd','',r[1]))});body.appendChild(dl);
+   },[['View history','',function(){location.href='history.html'}],['Print receipt','ghost',function(){window.print()}],['Done','ghost',function(){dlg.close()}]]);
+   page();
+  }],['Back','ghost',function(){dlg.close()}]]);
+ }
+
+ drawAll();drawCart();
+}
+page();
+})();
+</script>
+</body>
+</html>

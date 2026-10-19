@@ -141,7 +141,8 @@
 <script>
 (function(){
 var f=document.getElementById('bookingForm'),dlg=document.getElementById('dlg'),body=document.getElementById('dlgBody'),title=document.getElementById('dlgTitle'),acts=document.getElementById('dlgActs'),note=document.getElementById('dlgNote');
-document.getElementById('bdate').min=new Date().toISOString().slice(0,10);
+function localYmd(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+document.getElementById('bdate').min=localYmd();
 var data=[],ref=null;
 var me=AS.session(),isCustomer=!!(me&&me.role==='customer');
 var gate=document.getElementById('bookGate');
@@ -173,7 +174,7 @@ function review(){
  dlg.showModal();
 }
 function confirmBooking(){
- ref='AS-'+new Date().toISOString().slice(2,10).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+ ref='AS-'+localYmd().slice(2).replace(/-/g,'')+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
  var all=AS.get('as_bookings',[]);
  all.push({ref:ref,owner:me&&me.role==='customer'?me.email:'',name:val('name'),mobile:val('mobile'),email:val('email'),address:val('address'),service:val('service'),other:val('needed'),date:val('date'),time:val('time'),vehicle:[val('year'),val('make'),val('model')].filter(Boolean).join(' '),issue:val('issue'),status:'Pending',created:Date.now()});
  AS.set('as_bookings',all);
@@ -189,7 +190,11 @@ function confirmBooking(){
  btn('Done','',function(){dlg.close();});
 }
 dlg.addEventListener('close',function(){if(ref){f.reset();ref=null;}});
-f.addEventListener('submit',function(e){e.preventDefault();if(!isCustomer){location.href='login.html?mode=register&next=index.html%23booking';return}review();});
+f.addEventListener('submit',function(e){e.preventDefault();if(!isCustomer){location.href='login.html?mode=register&next=index.html%23booking';return}
+ var dv=val('date');
+ if(dv<localYmd()){alert('Please pick today or a future date.');return}
+ if(new Date(dv+'T00:00').getDay()===0){alert('We are closed on Sundays. Please pick Monday to Saturday.');return}
+ review();});
 })();
 </script>
 </body>

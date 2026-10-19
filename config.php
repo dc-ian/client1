@@ -15,6 +15,9 @@ const STORE_ADDRESS   = '';
 const STORE_PHONE     = '';
 const RECEIPT_FOOTER  = 'Thank you for shopping at TurboParts.';
 
+// Set to true on your own computer to see technical error details. Keep false on a live server.
+const DEBUG = false;
+
 const MAX_LOGIN_FAILS = 5;   // wrong passwords before the account is locked
 const LOCK_MINUTES    = 5;   // how long the lock lasts
 

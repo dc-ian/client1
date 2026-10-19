@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07070a"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e11d2e'/%3E%3Cpath d='M9 22l5-12h4l5 12h-4l-1-3h-4l-1 3z' fill='white'/%3E%3C/svg%3E">
+<title>Bookings – Automotive Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="authpage light">
+<nav>
+<div class="wrap">
+<a class="logo" href="index.html">Automotive <i>Service</i></a>
+<div class="dnav"><a class="textlink" href="dashboard.html">Dashboard</a><a class="textlink" data-cust href="book.html">Book a service</a><a class="textlink" data-cust href="history.html">History</a><a class="textlink" data-admin href="bookings.html">Bookings</a><a class="textlink" data-admin href="customers.html">Customers</a><a class="textlink" href="#" id="logoutLink">Log out</a></div><span class="dnav-sp" aria-hidden="true"></span>
+</div>
+</nav>
+
+<main class="wrap dash" id="dash"></main>
+
+<dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"><div class="dlg-in"><p class="dlg-brand">Automotive Service</p><h2 id="dlgTitle"></h2><p class="sub" id="dlgNote"></p><div id="dlgBody"></div><div class="dlg-acts" id="dlgActs"></div></div></dialog>
+
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script>
+(function(){
+if(!guard('admin'))return;
+wireNav();
+var root=document.getElementById('dash');
+var filter={status:'All',q:''};
+var top=h('div','dash-top');
+var t=h('div');t.appendChild(h('h1','','Bookings'));t.appendChild(h('p','sub','Review and update every booking.'));top.appendChild(t);root.appendChild(top);
+var bar=h('div','toolbar');
+var sel=h('select');['All'].concat(STATUS).forEach(function(x){var o=h('option','',x);o.value=x;sel.appendChild(o)});sel.value=filter.status;sel.setAttribute('aria-label','Filter by status');
+var q=h('input');q.placeholder='Search name, reference or service';q.setAttribute('aria-label','Search bookings');
+bar.appendChild(sel);bar.appendChild(q);
+var exp=btn('Export CSV','ghost',function(){
+ var rows=filtered();if(!rows.length){toast('Nothing to export','warn');return}
+ downloadCSV('bookings-'+today()+'.csv',[['Reference','Status','Customer','Mobile','Email','Service','Date','Time','Vehicle','Total','Address','Issue']].concat(rows.map(function(b){return [b.ref,b.status,b.name,b.mobile,b.email,b.service,b.date,b.time,b.vehicle,b.total||'',b.address,b.issue]})));
+ toast('Exported '+rows.length+' booking'+(rows.length===1?'':'s'));
+});exp.classList.remove('sm');bar.appendChild(exp);root.appendChild(bar);
+var holder=h('div');root.appendChild(holder);
+function filtered(){
+ var needle=filter.q.toLowerCase();
+ return bookings().filter(function(b){return (filter.status==='All'||b.status===filter.status)&&(!needle||[b.name,b.ref,b.service,b.mobile,b.email].join(' ').toLowerCase().indexOf(needle)>-1)});
+}
+function draw(){
+ holder.textContent='';
+ var all=bookings(),rows=filtered();
+ if(rows.length)holder.appendChild(h('p','result-count','Showing '+rows.length+' of '+all.length+' booking'+(all.length===1?'':'s')));
+ if(!rows.length){holder.appendChild(empty(all.length?'No bookings match your filter.':'No bookings yet. They will appear here when customers book.'));return}
+ holder.appendChild(table(['Reference','Customer','Service','Date and time','Vehicle','Total','Status',''],rows.map(function(b){return [b.ref,whoCell(b),b.service,fmtDate(b.date)+', '+b.time,b.vehicle||'-',b.total?money(b.total):'-',statusSelect(b,draw),viewBtn(b)]})));
+}
+sel.addEventListener('change',function(){filter.status=sel.value;draw()});
+q.addEventListener('input',function(){filter.q=q.value;draw()});
+draw();
+})();
+</script>
+</body>
+</html>

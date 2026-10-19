@@ -3,6 +3,9 @@ require __DIR__ . '/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: same-origin');
 
 function out($data, int $code = 200): void {
     http_response_code($code);
@@ -15,8 +18,10 @@ function must_post(): void { if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Us
 function body(): array { $j = json_decode(file_get_contents('php://input'), true); return is_array($j) ? $j : []; }
 
 set_exception_handler(function (Throwable $e) {
-    $msg = $e instanceof PDOException ? 'Database error. Did you run install.php? (' . $e->getMessage() . ')' : $e->getMessage();
-    fail($msg, 500);
+    error_log('[TurboParts] ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    // Technical details stay in the server log. Visitors only see a safe message (unless DEBUG is on in config.php).
+    if (DEBUG) fail($e->getMessage(), 500);
+    fail($e instanceof PDOException ? 'Database error. Check that MySQL is running and that install.php has been run.' : 'Something went wrong on the server. Please try again.', 500);
 });
 
 // Cashiers never receive the purchase cost, only owners do.
@@ -74,6 +79,9 @@ function save_upload(): ?string {
     $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'][$info['mime'] ?? ''] ?? null;
     if (!$ext) fail('Photo must be a JPG, PNG, WebP or GIF image.');
     if (!is_dir(__DIR__ . '/uploads')) mkdir(__DIR__ . '/uploads', 0775, true);
+    // Uploaded photos must never be executed as scripts, even if a file slips through.
+    $ht = __DIR__ . '/uploads/.htaccess';
+    if (!is_file($ht)) @file_put_contents($ht, "<FilesMatch \"\\.(php|phtml|php5|phar)$\">\n  Require all denied\n</FilesMatch>\n");
     $name = bin2hex(random_bytes(10)) . '.' . $ext;
     if (!move_uploaded_file($f['tmp_name'], __DIR__ . '/uploads/' . $name)) fail('Could not save the photo. Check the uploads folder permissions.', 500);
     return $name;

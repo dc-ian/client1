@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07070a"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e11d2e'/%3E%3Cpath d='M9 22l5-12h4l5 12h-4l-1-3h-4l-1 3z' fill='white'/%3E%3C/svg%3E">
+<title>History – Automotive Service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="authpage light">
+<nav>
+<div class="wrap">
+<a class="logo" href="index.html">Automotive <i>Service</i></a>
+<div class="dnav"><a class="textlink" href="dashboard.html">Dashboard</a><a class="textlink" data-cust href="book.html">Book a service</a><a class="textlink" data-cust href="history.html">History</a><a class="textlink" data-admin href="bookings.html">Bookings</a><a class="textlink" data-admin href="customers.html">Customers</a><a class="textlink" href="#" id="logoutLink">Log out</a></div><span class="dnav-sp" aria-hidden="true"></span>
+</div>
+</nav>
+
+<main class="wrap dash" id="dash"></main>
+
+<dialog id="dlg" class="dlg" aria-labelledby="dlgTitle"><div class="dlg-in"><p class="dlg-brand">Automotive Service</p><h2 id="dlgTitle"></h2><p class="sub" id="dlgNote"></p><div id="dlgBody"></div><div class="dlg-acts" id="dlgActs"></div></div></dialog>
+
+<script src="auth.js"></script>
+<script src="app.js"></script>
+<script>
+(function(){
+if(!guard('customer'))return;
+wireNav();
+var root=document.getElementById('dash');
+var list=mine(me.email),statusF='All';
+var top=h('div','dash-top');
+var t=h('div');t.appendChild(h('h1','','Service and booking history'));t.appendChild(h('p','sub','Every service you have booked with us.'));top.appendChild(t);
+var l=h('a','btn','Book a service');l.href='book.html';top.appendChild(l);root.appendChild(top);
+var s=h('div','stats-row');
+var hw=h('div');hw.style.marginTop='24px';
+function draw(){
+ list=mine(me.email);
+ s.textContent='';
+ s.appendChild(stat('Total bookings',list.length));
+ s.appendChild(stat('Upcoming',list.filter(function(b){return b.status==='Pending'||b.status==='Confirmed'}).length));
+ s.appendChild(stat('Completed services',list.filter(function(b){return b.status==='Completed'}).length));
+ hw.textContent='';
+ if(!list.length){hw.appendChild(empty('No bookings yet. Book your first service and it will show up here.'));return}
+ var bar=h('div','toolbar');var sel=h('select');['All'].concat(STATUS).forEach(function(x){var o=h('option','',x);o.value=x;sel.appendChild(o)});sel.value=statusF;sel.setAttribute('aria-label','Filter by status');
+ sel.addEventListener('change',function(){statusF=sel.value;draw();});bar.appendChild(sel);hw.appendChild(bar);
+ var rows=list.filter(function(b){return statusF==='All'||b.status===statusF});
+ if(!rows.length){hw.appendChild(empty('No '+statusF.toLowerCase()+' bookings.'));return}
+ hw.appendChild(table(['Reference','Service','Date','Time','Vehicle','Total','Status',''],rows.map(function(b){
+  var acts=h('div','row-acts');acts.appendChild(viewBtn(b));
+  if(canCancel(b))acts.appendChild(btn('Cancel','danger',function(){cancelBooking(b.ref,draw)}));
+  return [b.ref,b.service,fmtDate(b.date),b.time,b.vehicle||'-',b.total?money(b.total):'-',badge(b.status),acts]})));
+}
+root.appendChild(s);root.appendChild(hw);draw();
+})();
+</script>
+</body>
+</html>
